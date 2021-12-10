@@ -4,8 +4,9 @@ from Crypto import Random
 from base64 import b64encode, b64decode
 from datetime import datetime
 
+
 class ObjetoSeguro:
-    def __init__(self, nombre:str):
+    def __init__(self, nombre: str):
         self.nombre = nombre
         self.keys = {}
         self.__gen_llaves()
@@ -22,15 +23,13 @@ class ObjetoSeguro:
         f = open(self.__file, 'w')
         f.close()
 
-    def saludar(self, destino:str, msg:str):
+    def saludar(self, destino: str, msg: str):
         return f"Hola {destino}: {self.__esperar_respuesta(msg)}"
 
-
-    def __responder(self, msg:str):
+    def __responder(self, msg: str):
         return "mensaje respuesta " + msg
 
-
-    def consultar_msg(self, id):
+    def consultar_msg(self, id: int):
         with open(self.__file, 'r') as f:
             data = f.readlines()
             for line in data:
@@ -39,37 +38,30 @@ class ObjetoSeguro:
                     return new_line[1]
         return ""
 
-
-    def cifrar_msg(self, k_pub, msg):
+    def cifrar_msg(self, k_pub: key, msg: str):
         cipher = PKCS1_OAEP.new(k_pub)
         return cipher.encrypt(self._codificar64(msg))
-
 
     def __decifrar_msg(self, msg):
         cipher = PKCS1_OAEP.new(self.__k_prv)
         return self._decodificar64(cipher.decrypt(msg))
 
-
     def llave_publica(self):
         return self.k_pub
-
 
     def _codificar64(self, msg):
         return b64encode(msg.encode("utf-8"))
 
-
     def _decodificar64(self, msg):
         return b64decode(msg).decode("utf-8")
 
-
-    def almacenar_msg(self, msg):
-        self.__id+=1
+    def almacenar_msg(self, msg: str):
+        self.__id += 1
         with open(self.__file, 'a') as f:
             now = datetime.now()
             new_msg = msg + ": " + now.strftime("%d/%m/%Y, %H:%M:%S")
             f.write(f"{self.__id}: {new_msg}\n")
         return self.__id
-
 
     def __esperar_respuesta(self, msg):
         new_msg = self.__decifrar_msg(msg)
@@ -78,7 +70,6 @@ class ObjetoSeguro:
 
 
 if __name__ == '__main__':
-
     bob = ObjetoSeguro("Bob")
     alice = ObjetoSeguro("Alice")
     bob_saludo = bob.cifrar_msg(alice.llave_publica(), "hola mundo")
