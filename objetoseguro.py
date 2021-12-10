@@ -1,14 +1,28 @@
+'''
+    Archivo: objetoseguro.py
+    Autor: Oswaldo Franco
+    Fecha: Diciembre 2021
+    Programa: INTEL-INAOE 2021
+'''
+# bibliotecas para uso de esquemas de cifrado
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto import Random
 from base64 import b64encode, b64decode
 from datetime import datetime
 
+'''
+Atributos:
+    self.nombre: nombre de objeto
+    self.__k_prv: llave privada de esquema RSA
+    self.k_pub: llave publica de esquema RSA
+    self.__id: identificador de mensaje
+    self.__file: nombre de archivo log
+'''
 
 class ObjetoSeguro:
     def __init__(self, nombre: str):
         self.nombre = nombre
-        self.keys = {}
         self.__gen_llaves()
         self.__logfile()
 
@@ -38,7 +52,7 @@ class ObjetoSeguro:
                     return new_line[1]
         return ""
 
-    def cifrar_msg(self, k_pub: key, msg: str):
+    def cifrar_msg(self, k_pub: bytes, msg: str):
         cipher = PKCS1_OAEP.new(k_pub)
         return cipher.encrypt(self._codificar64(msg))
 
@@ -67,13 +81,3 @@ class ObjetoSeguro:
         new_msg = self.__decifrar_msg(msg)
         self.almacenar_msg(new_msg)
         return self.__responder(new_msg)
-
-
-if __name__ == '__main__':
-    bob = ObjetoSeguro("Bob")
-    alice = ObjetoSeguro("Alice")
-    bob_saludo = bob.cifrar_msg(alice.llave_publica(), "hola mundo")
-    print(alice.saludar(bob.nombre, bob_saludo))
-    print(alice.consultar_msg(1))
-    print(alice.almacenar_msg("adios"))
-    print(alice.consultar_msg(3))
