@@ -99,11 +99,6 @@ class ObjetoSeguro:
     def start(self):
         self.write = self.messenger.submit(self.cli_socket.write)
         self.read = self.messenger.submit(self.srv_socket.read)
-
-        # self.cli_socket.captura_msg(self.k_pub)
-        # self.llave_cliente = self.srv_socket.llave
-        # print(self.llave_cliente)
-
         self.messenger.submit(self.send_msg)
 
     def send_msg(self):
