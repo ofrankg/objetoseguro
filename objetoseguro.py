@@ -10,6 +10,9 @@ from Crypto.Cipher import PKCS1_OAEP
 from Crypto import Random
 from base64 import b64encode, b64decode
 from datetime import datetime
+from server import SocketServer
+from client import SocketClient
+from concurrent.futures import ThreadPoolExecutor
 
 '''
 Atributos:
@@ -21,15 +24,19 @@ Atributos:
 '''
 
 class ObjetoSeguro:
-    def __init__(self, nombre: str):
+    def __init__(self, nombre: str, puerto_srv: int, puerto_cli: int):
         self.nombre = nombre
+        self.srv_socket = SocketServer(puerto_srv)
+        self.cli_socket = SocketClient(puerto_cli)
+        self.messenger = ThreadPoolExecutor(max_workers=3)
         self.__gen_llaves()
         self.__logfile()
 
     def __gen_llaves(self):
         seed = Random.new().read
-        self.__k_prv = RSA.generate(2048, seed)
-        self.k_pub = self.__k_prv.publickey()
+        self.__key = RSA.generate(2048, seed)
+        self.k_prv = self.__key.exportKey()
+        self.k_pub = self.__key.publickey().exportKey()
 
     def __logfile(self):
         self.__id = 0
@@ -53,11 +60,11 @@ class ObjetoSeguro:
         return ""
 
     def cifrar_msg(self, k_pub: bytes, msg: str):
-        cipher = PKCS1_OAEP.new(k_pub)
+        cipher = PKCS1_OAEP.new(RSA.importKey(k_pub))
         return cipher.encrypt(self._codificar64(msg))
 
-    def __decifrar_msg(self, msg):
-        cipher = PKCS1_OAEP.new(self.__k_prv)
+    def decifrar_msg(self, msg):
+        cipher = PKCS1_OAEP.new(RSA.importKey(self.k_prv))
         return self._decodificar64(cipher.decrypt(msg))
 
     def llave_publica(self):
@@ -71,9 +78,9 @@ class ObjetoSeguro:
 
     def almacenar_msg(self, msg: str):
         self.__id += 1
+        now = datetime.now()
+        new_msg = msg + ": " + now.strftime("%d/%m/%Y, %H:%M:%S")
         with open(self.__file, 'a') as f:
-            now = datetime.now()
-            new_msg = msg + ": " + now.strftime("%d/%m/%Y, %H:%M:%S")
             f.write(f"{self.__id}: {new_msg}\n")
         return self.__id
 
@@ -81,3 +88,25 @@ class ObjetoSeguro:
         new_msg = self.__decifrar_msg(msg)
         self.almacenar_msg(new_msg)
         return self.__responder(new_msg)
+
+    def conectar(self):
+        server = self.srv_socket.start()
+        client = self.cli_socket.start()
+        while not server.done() and not client.done():
+            pass
+        print("Conectado")
+
+    def start(self):
+        self.write = self.messenger.submit(self.cli_socket.write)
+        self.read = self.messenger.submit(self.srv_socket.read)
+
+        # self.cli_socket.captura_msg(self.k_pub)
+        # self.llave_cliente = self.srv_socket.llave
+        # print(self.llave_cliente)
+
+        self.messenger.submit(self.send_msg)
+
+    def send_msg(self):
+        while True:
+            msg = input()
+            self.cli_socket.captura_msg(msg)
